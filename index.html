@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Words Beyond Borders Map</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body, #map {{
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }}
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/papaparse@5.3.1/papaparse.min.js"></script>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTz-evBOnvNNUiVR9PpHQIpYjAxfEigeGCkOMg3u2mqf1HMR3Sjf0zKPUpehhhIlZ3IMdew24JWT__o/pub?output=csv';
+
+    const map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {{
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors'
+    }}).addTo(map);
+
+    Papa.parse(sheetURL, {{
+      download: true,
+      header: true,
+      complete: function(results) {{
+        results.data.forEach(row => {{
+          const name = row['Name'] && row['Name'].trim() !== '' ? row['Name'] : 'Anonymous';
+          const message = row['Message'] || '';
+          const location = row['Location'];
+
+          if (!location || location.trim() === '') return;
+
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${{encodeURIComponent(location)}}`)
+            .then(res => res.json())
+            .then(data => {{
+              if (data && data.length > 0) {{
+                const lat = data[0].lat;
+                const lon = data[0].lon;
+                const marker = L.marker([lat, lon]).addTo(map);
+                marker.bindPopup(`<strong>${{name}}</strong><br>${{message}}`);
+              }}
+            }});
+        }});
+      }}
+    }});
+  </script>
+</body>
+</html>
